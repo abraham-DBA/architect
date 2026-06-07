@@ -1,0 +1,259 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum LifeCategory {
+  FINANCIAL
+  HEALTH
+  FAMILY
+  SKILLS
+  TRAVEL
+  SPIRITUAL
+}
+
+enum TimeHorizon {
+  ONE_YEAR
+  THREE_YEAR
+  FIVE_YEAR
+  TEN_YEAR
+}
+
+enum GoalStatus {
+  IN_PROGRESS
+  COMPLETED
+  NEEDS_REEVALUATION
+}
+
+enum JournalTag {
+  INSIGHT
+  BREAKTHROUGH
+  LESSON
+  GENERAL
+}
+
+enum BookStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum ProgressType {
+  PAGE
+  PERCENTAGE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+
+  accomplishments  Accomplishment[]
+  brainDumpEntries BrainDumpEntry[]
+  priorityGoals    PriorityGoal[]
+  weeklyReviews    WeeklyReview[]
+  journalEntries   JournalEntry[]
+  books            Book[]
+  preferences      UserPreferences?
+  quoteFavorites   UserQuoteFavorite[]
+  quoteViews       UserQuoteView[]
+}
+
+model UserPreferences {
+  id                              String    @id @default(cuid())
+  userId                          String    @unique
+  user                            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goalSettingSessionStartedAt     DateTime?
+  accomplishmentsVaultReviewedInSession Boolean @default(false)
+  brainDumpSkipped                  Boolean @default(false)
+  updatedAt                       DateTime  @updatedAt
+}
+
+model Accomplishment {
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String       @db.VarChar(100)
+  description  String       @db.VarChar(2000)
+  dateAchieved DateTime
+  category     LifeCategory
+  createdAt    DateTime     @default(now())
+
+  @@index([userId, dateAchieved])
+}
+
+model BrainDumpEntry {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content     String
+  category    LifeCategory?
+  timeHorizon TimeHorizon?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  priorityGoal PriorityGoal?
+
+  @@index([userId])
+}
+
+model PriorityGoal {
+  id                String       @id @default(cuid())
+  userId            String
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brainDumpEntryId  String?      @unique
+  brainDumpEntry    BrainDumpEntry? @relation(fields: [brainDumpEntryId], references: [id], onDelete: SetNull)
+  statement         String
+  category          LifeCategory
+  timeHorizon       TimeHorizon
+  rank              Int
+  whyStatement      String
+  identityBecoming  String
+  status            GoalStatus   @default(IN_PROGRESS)
+  financialTarget   Decimal?     @db.Decimal(12, 2)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  actionSteps           ActionStep[]
+  savingsContributions  SavingsContribution[]
+  journalEntries        JournalEntry[]
+  books                 Book[]
+  weeklyReviewStatuses  WeeklyReviewGoalStatus[]
+  weeklyReviewRanks     WeeklyReviewRankChange[]
+
+  @@unique([userId, rank])
+  @@index([userId])
+}
+
+model ActionStep {
+  id          String    @id @default(cuid())
+  goalId      String
+  goal        PriorityGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  description String
+  deadline    DateTime?
+  done        Boolean   @default(false)
+  sortOrder   Int       @default(0)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([goalId, sortOrder])
+}
+
+model SavingsContribution {
+  id     String   @id @default(cuid())
+  goalId String
+  goal   PriorityGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  amount Decimal  @db.Decimal(12, 2)
+  date   DateTime
+
+  @@index([goalId, date])
+}
+
+model WeeklyReview {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  progressAnswer String
+  adjustAnswer   String
+  becomeAnswer   String
+  completedAt    DateTime @default(now())
+
+  goalStatuses WeeklyReviewGoalStatus[]
+  rankChanges  WeeklyReviewRankChange[]
+
+  @@index([userId, completedAt])
+}
+
+model WeeklyReviewGoalStatus {
+  id       String     @id @default(cuid())
+  reviewId String
+  review   WeeklyReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  goalId   String
+  goal     PriorityGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  status   GoalStatus
+
+  @@unique([reviewId, goalId])
+}
+
+model WeeklyReviewRankChange {
+  id       String       @id @default(cuid())
+  reviewId String
+  review   WeeklyReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  goalId   String
+  goal     PriorityGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  rank     Int
+
+  @@unique([reviewId, goalId])
+  @@unique([reviewId, rank])
+}
+
+model JournalEntry {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String      @db.VarChar(200)
+  content   String      @db.VarChar(10000)
+  tag       JournalTag  @default(GENERAL)
+  goalId    String?
+  goal      PriorityGoal? @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  createdAt DateTime    @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Book {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String        @db.VarChar(500)
+  author       String        @db.VarChar(200)
+  goalId       String?
+  goal         PriorityGoal? @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  status       BookStatus    @default(NOT_STARTED)
+  progressType ProgressType?
+  currentPage  Int?
+  totalPages   Int?
+  percentage   Int?
+  keyLessons   String?       @db.VarChar(5000)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([userId, status])
+}
+
+model Quote {
+  id   String @id @default(cuid())
+  text String
+
+  favorites UserQuoteFavorite[]
+  views     UserQuoteView[]
+}
+
+model UserQuoteFavorite {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quoteId   String
+  quote     Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, quoteId])
+}
+
+model UserQuoteView {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quoteId    String
+  quote      Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  viewedDate String
+
+  @@unique([userId, viewedDate])
+  @@index([userId, viewedDate])
+}

@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: architect
+      POSTGRES_PASSWORD: architect
+      POSTGRES_DB: the_architect
+    ports:
+      - "5433:5432"
+    volumes:
+      - architect_pg_data:/var/lib/postgresql/data
+
+volumes:
+  architect_pg_data:
