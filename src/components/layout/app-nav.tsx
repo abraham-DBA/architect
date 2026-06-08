@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { LogOut } from "lucide-react";
+import { LogOut, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -35,28 +35,39 @@ export function AppNav() {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-md safe-top">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:py-4">
-        <Link href="/dashboard" className="min-w-0 shrink">
-          <p className="truncate text-base font-semibold text-foreground sm:text-lg">The Architect</p>
-          <p className="hidden truncate text-xs text-muted sm:block">
-            Become the person who achieves your goals
-          </p>
+        <Link href="/dashboard" className="min-w-0 shrink flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+            <Sparkles className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="truncate text-base font-bold tracking-tight text-foreground">The Architect</p>
+            <p className="hidden truncate text-xs text-muted sm:block">
+              Become the person who achieves your goals
+            </p>
+          </div>
         </Link>
 
         <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Main navigation">
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={cn(
-                "min-h-10 rounded-lg px-3 py-2 text-sm font-medium transition",
-                isActive(pathname, link.href)
-                  ? "bg-accent-surface text-accent-foreground"
-                  : "text-muted hover:bg-stone-100 hover:text-foreground"
-              )}
-            >
-              {link.label}
-            </Link>
-          ))}
+          {links.map((link) => {
+            const active = isActive(pathname, link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  "relative min-h-10 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  active
+                    ? "bg-accent-surface text-accent-foreground"
+                    : "text-muted hover:bg-stone-100 hover:text-foreground dark:hover:bg-stone-800"
+                )}
+              >
+                {link.label}
+                {active && (
+                  <span className="absolute bottom-0 left-1/2 h-0.5 w-4 -translate-x-1/2 rounded-full bg-primary" />
+                )}
+              </Link>
+            );
+          })}
         </nav>
 
         <Button
@@ -84,20 +95,26 @@ export function AppNav() {
         aria-label="Tablet navigation"
       >
         <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={cn(
-                "shrink-0 min-h-10 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition",
-                isActive(pathname, link.href)
-                  ? "bg-accent-surface text-accent-foreground"
-                  : "text-muted hover:bg-stone-100"
-              )}
-            >
-              {link.label}
-            </Link>
-          ))}
+          {links.map((link) => {
+            const active = isActive(pathname, link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  "relative shrink-0 min-h-10 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors",
+                  active
+                    ? "bg-accent-surface text-accent-foreground"
+                    : "text-muted hover:bg-stone-100 dark:hover:bg-stone-800"
+                )}
+              >
+                {link.label}
+                {active && (
+                  <span className="absolute bottom-0 left-1/2 h-0.5 w-4 -translate-x-1/2 rounded-full bg-primary" />
+                )}
+              </Link>
+            );
+          })}
         </div>
       </nav>
     </header>

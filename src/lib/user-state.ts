@@ -3,14 +3,16 @@ import { ACCOMPLISHMENTS_REQUIRED, PRIORITY_GOALS_REQUIRED } from "@/lib/constan
 import { calculateWeeklyStreak, isWeeklyReviewDue } from "@/lib/utils";
 
 export async function getUserOnboardingState(userId: string) {
-  const [accomplishmentCount, priorityGoalCount, preferences] = await Promise.all([
+  const [accomplishmentCount, priorityGoalCount, brainDumpCount, preferences] = await Promise.all([
     prisma.accomplishment.count({ where: { userId } }),
     prisma.priorityGoal.count({ where: { userId } }),
+    prisma.brainDumpEntry.count({ where: { userId } }),
     prisma.userPreferences.findUnique({ where: { userId } }),
   ]);
 
   const accomplishmentsComplete = accomplishmentCount >= ACCOMPLISHMENTS_REQUIRED;
   const priorityGoalsComplete = priorityGoalCount >= PRIORITY_GOALS_REQUIRED;
+  const brainDumpComplete = brainDumpCount > 0 || (preferences?.brainDumpSkipped ?? false);
 
   return {
     accomplishmentCount,
@@ -30,7 +32,7 @@ export async function getUserOnboardingState(userId: string) {
       {
         id: "brain-dump",
         label: "Goal Brain Dump",
-        complete: false,
+        complete: brainDumpComplete,
         href: "/brain-dump",
         optional: true,
       },

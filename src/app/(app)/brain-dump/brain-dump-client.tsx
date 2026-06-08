@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { Lightbulb } from "lucide-react";
+import { Lightbulb, Trash2, SkipForward } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
@@ -11,6 +11,8 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Dialog } from "@/components/ui/dialog";
+import { AlertDialog } from "@/components/ui/alert-dialog";
+import { SkeletonPage } from "@/components/ui/skeleton";
 import {
   CATEGORY_LABELS,
   HORIZON_LABELS,
@@ -37,11 +39,13 @@ export function BrainDumpClient() {
   const searchParams = useSearchParams();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewItems, setReviewItems] = useState<Accomplishment[]>([]);
   const [newContent, setNewContent] = useState("");
+  const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     const res = await fetch("/api/brain-dump");
     if (res.status === 403) {
       router.replace("/vault");
@@ -50,7 +54,7 @@ export function BrainDumpClient() {
     const data = await res.json();
     setEntries(data.entries ?? []);
     setLoading(false);
-  }
+  }, [router]);
 
   useEffect(() => {
     load();
@@ -62,7 +66,7 @@ export function BrainDumpClient() {
           setShowReviewModal(true);
         });
     }
-  }, [searchParams, router]);
+  }, [searchParams, load]);
 
   function addEntry() {
     if (!newContent.trim()) return;
@@ -71,16 +75,26 @@ export function BrainDumpClient() {
     toast.success("Aspiration added");
   }
 
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault();
+      addEntry();
+    }
+  }
+
   function updateEntry(index: number, patch: Partial<Entry>) {
     setEntries((prev) => prev.map((e, i) => (i === index ? { ...e, ...patch } : e)));
   }
 
-  function removeEntry(index: number) {
-    setEntries((prev) => prev.filter((_, i) => i !== index));
+  function confirmRemoveEntry() {
+    if (deleteIndex === null) return;
+    setEntries((prev) => prev.filter((_, i) => i !== deleteIndex));
+    setDeleteIndex(null);
     toast.success("Entry removed");
   }
 
   async function saveAll() {
+    setSaving(true);
     const res = await fetch("/api/brain-dump", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -89,10 +103,18 @@ export function BrainDumpClient() {
     const data = await res.json();
     if (!res.ok) {
       toast.error(data.error ?? "Save was unsuccessful. Your entries are still in the form.");
+      setSaving(false);
       return;
     }
     setEntries(data.entries);
     toast.success("Brain dump saved");
+    setSaving(false);
+  }
+
+  async function skipBrainDump() {
+    await fetch("/api/brain-dump/skip", { method: "POST" });
+    toast.success("Brain dump skipped — you can return anytime");
+    router.push("/priority-goals");
   }
 
   async function confirmReview() {
@@ -102,12 +124,7 @@ export function BrainDumpClient() {
   }
 
   if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="h-8 w-48 animate-pulse rounded-lg bg-stone-200" />
-        <div className="h-40 animate-pulse rounded-xl bg-stone-100" />
-      </div>
-    );
+    return <SkeletonPage />;
   }
 
   return (
@@ -116,8 +133,10 @@ export function BrainDumpClient() {
         title="Goal Brain Dump"
         description="Capture every aspiration before you narrow focus."
         actions={
-          <div className="rounded-lg bg-accent-surface px-4 py-2 text-sm font-medium text-accent-foreground">
-            {entries.length} captured
+          <div className="flex items-center gap-2">
+            <div className="rounded-lg bg-accent-surface px-4 py-2 text-sm font-medium text-accent-foreground shadow-sm">
+              {entries.length} captured
+            </div>
           </div>
         }
       />
@@ -128,11 +147,15 @@ export function BrainDumpClient() {
           <Textarea
             value={newContent}
             onChange={(e) => setNewContent(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="Write freely — e.g. Read 20 pages daily, save $10k, run a marathon..."
             rows={3}
             className="flex-1"
           />
-          <Button onClick={addEntry} className="w-full shrink-0 sm:w-auto">Add entry</Button>
+          <div className="flex flex-col gap-2 shrink-0">
+            <Button onClick={addEntry} className="w-full sm:w-auto">Add entry</Button>
+            <p className="text-[10px] text-muted text-center hidden sm:block">⌘+Enter to add</p>
+          </div>
         </div>
       </Card>
 
@@ -145,7 +168,7 @@ export function BrainDumpClient() {
       ) : (
         <div className="space-y-4">
           {entries.map((entry, index) => (
-            <Card key={entry.id ?? `new-${index}`}>
+            <Card key={entry.id ?? `new-${index}`} className="animate-fade-in-up" style={{ animationDelay: `${index * 40}ms` }}>
               <Textarea
                 value={entry.content}
                 onChange={(e) => updateEntry(index, { content: e.target.value })}
@@ -170,7 +193,12 @@ export function BrainDumpClient() {
                     <option key={h} value={h}>{HORIZON_LABELS[h]}</option>
                   ))}
                 </Select>
-                <Button variant="ghost" className="w-full sm:col-span-2 lg:col-span-1" onClick={() => removeEntry(index)}>
+                <Button
+                  variant="ghost"
+                  className="w-full sm:col-span-2 lg:col-span-1 text-danger hover:bg-danger-surface hover:text-danger gap-1.5"
+                  onClick={() => setDeleteIndex(index)}
+                >
+                  <Trash2 className="h-4 w-4" />
                   Remove
                 </Button>
               </div>
@@ -180,12 +208,31 @@ export function BrainDumpClient() {
       )}
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Button onClick={saveAll} className="w-full sm:w-auto">Save progress</Button>
+        <Button onClick={saveAll} loading={saving} className="w-full sm:w-auto">
+          {saving ? "Saving…" : "Save progress"}
+        </Button>
         <Button variant="secondary" className="w-full sm:w-auto" onClick={() => router.push("/priority-goals")}>
           Continue to Priority Goals
         </Button>
+        <Button variant="ghost" className="w-full sm:w-auto gap-1.5" onClick={skipBrainDump}>
+          <SkipForward className="h-4 w-4" />
+          Skip for now
+        </Button>
       </div>
 
+      {/* Remove confirmation dialog */}
+      <AlertDialog
+        open={deleteIndex !== null}
+        onClose={() => setDeleteIndex(null)}
+        title="Remove entry?"
+        description="This will remove the aspiration from your brain dump."
+        cancelText="Cancel"
+        actionText="Remove"
+        onAction={confirmRemoveEntry}
+        variant="destructive"
+      />
+
+      {/* Accomplishments review dialog */}
       <Dialog
         open={showReviewModal}
         onClose={() => setShowReviewModal(false)}

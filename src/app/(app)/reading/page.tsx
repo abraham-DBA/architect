@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Trash2, Library, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -12,6 +12,9 @@ import { Select } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
+import { Dialog } from "@/components/ui/dialog";
+import { AlertDialog } from "@/components/ui/alert-dialog";
+import { SkeletonPage } from "@/components/ui/skeleton";
 import { BOOK_STATUS_LABELS, BOOK_STATUSES } from "@/lib/constants";
 
 type Book = {
@@ -29,6 +32,12 @@ type Book = {
 
 type Goal = { id: string; statement: string };
 
+const STATUS_BADGE_VARIANT: Record<string, "default" | "success" | "neutral"> = {
+  NOT_STARTED: "neutral",
+  IN_PROGRESS: "default",
+  COMPLETED: "success",
+};
+
 export default function ReadingPage() {
   const [grouped, setGrouped] = useState<Record<string, Book[]>>({
     NOT_STARTED: [],
@@ -37,6 +46,9 @@ export default function ReadingPage() {
   });
   const [stats, setStats] = useState({ total: 0, completedThisYear: 0 });
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   async function load() {
     const [readingRes, goalsRes] = await Promise.all([
@@ -48,6 +60,7 @@ export default function ReadingPage() {
     setGrouped(readingData.grouped ?? { NOT_STARTED: [], IN_PROGRESS: [], COMPLETED: [] });
     setStats(readingData.stats ?? { total: 0, completedThisYear: 0 });
     setGoals(goalsData.goals ?? []);
+    setLoading(false);
   }
 
   useEffect(() => {
@@ -56,6 +69,7 @@ export default function ReadingPage() {
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setSaving(true);
     const formEl = e.currentTarget;
     const form = new FormData(formEl);
     const res = await fetch("/api/reading", {
@@ -71,10 +85,12 @@ export default function ReadingPage() {
     if (!res.ok) {
       const data = await res.json();
       toast.error(data.error ?? "Failed to add book");
+      setSaving(false);
       return;
     }
     formEl.reset();
     toast.success("Book added");
+    setSaving(false);
     await load();
   }
 
@@ -93,11 +109,27 @@ export default function ReadingPage() {
     await load();
   }
 
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    const res = await fetch(`/api/reading/${deleteTarget}`, { method: "DELETE" });
+    if (!res.ok) {
+      toast.error("Failed to delete book");
+      return;
+    }
+    setDeleteTarget(null);
+    toast.success("Book deleted");
+    await load();
+  }
+
   function bookProgress(book: Book) {
     if (book.progressType === "PAGE" && book.currentPage != null && book.totalPages) {
       return Math.round((book.currentPage / book.totalPages) * 100);
     }
     return book.percentage ?? 0;
+  }
+
+  if (loading) {
+    return <SkeletonPage />;
   }
 
   return (
@@ -108,13 +140,23 @@ export default function ReadingPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <p className="text-sm text-stone-500">Total books</p>
-          <p className="text-3xl font-bold">{stats.total}</p>
+        <Card className="flex items-center gap-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-surface text-accent-foreground">
+            <Library className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-sm text-muted">Total books</p>
+            <p className="text-3xl font-bold">{stats.total}</p>
+          </div>
         </Card>
-        <Card>
-          <p className="text-sm text-stone-500">Completed this year</p>
-          <p className="text-3xl font-bold">{stats.completedThisYear}</p>
+        <Card className="flex items-center gap-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-success-surface text-success">
+            <CheckCircle2 className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-sm text-muted">Completed this year</p>
+            <p className="text-3xl font-bold">{stats.completedThisYear}</p>
+          </div>
         </Card>
       </div>
 
@@ -135,7 +177,9 @@ export default function ReadingPage() {
             ))}
           </Select>
           <div className="sm:col-span-2">
-            <Button type="submit" className="w-full sm:w-auto">Add book</Button>
+            <Button type="submit" loading={saving} className="w-full sm:w-auto">
+              {saving ? "Adding…" : "Add book"}
+            </Button>
           </div>
         </form>
       </Card>
@@ -149,18 +193,32 @@ export default function ReadingPage() {
       ) : (
         BOOK_STATUSES.map((status) => (
           <section key={status} className="space-y-4">
-            <h2 className="text-lg font-semibold">{BOOK_STATUS_LABELS[status]}</h2>
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              {BOOK_STATUS_LABELS[status]}
+              <span className="text-sm font-normal text-muted">({(grouped[status] ?? []).length})</span>
+            </h2>
             {(grouped[status] ?? []).length === 0 ? (
-              <Card className="text-sm text-stone-500">No books in this group.</Card>
+              <Card className="text-sm text-muted">No books in this group.</Card>
             ) : (
               (grouped[status] ?? []).map((book) => (
                 <Card key={book.id}>
                   <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <h3 className="font-semibold">{book.title}</h3>
-                      <p className="text-sm text-stone-500">by {book.author}</p>
+                      <p className="text-sm text-muted">by {book.author}</p>
                     </div>
-                    <Badge>{BOOK_STATUS_LABELS[book.status]}</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={STATUS_BADGE_VARIANT[book.status] ?? "default"}>
+                        {BOOK_STATUS_LABELS[book.status]}
+                      </Badge>
+                      <button
+                        onClick={() => setDeleteTarget(book.id)}
+                        className="rounded-lg p-1.5 text-muted hover:text-danger hover:bg-danger-surface transition-colors"
+                        aria-label={`Delete ${book.title}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <Select
@@ -240,6 +298,17 @@ export default function ReadingPage() {
           </section>
         ))
       )}
+
+      <AlertDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete book?"
+        description="This will remove the book and its reading progress."
+        cancelText="Cancel"
+        actionText="Delete"
+        onAction={handleDelete}
+        variant="destructive"
+      />
     </div>
   );
 }

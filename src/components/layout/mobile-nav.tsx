@@ -62,10 +62,10 @@ export function MobileNav() {
               href={href}
               onClick={() => setMoreOpen(false)}
               className={cn(
-                "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition",
+                "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 isActive(pathname, href)
                   ? "bg-accent-surface text-accent-foreground"
-                  : "text-foreground hover:bg-stone-100"
+                  : "text-foreground hover:bg-stone-100 dark:hover:bg-stone-800"
               )}
             >
               <Icon className="h-5 w-5" />
@@ -74,7 +74,7 @@ export function MobileNav() {
           ))}
           <Button
             variant="ghost"
-            className="mt-2 w-full justify-start gap-3 text-red-700 hover:bg-red-50 hover:text-red-800"
+            className="mt-2 w-full justify-start gap-3 text-danger hover:bg-danger-surface hover:text-danger"
             onClick={logout}
           >
             <LogOut className="h-5 w-5" />
@@ -84,10 +84,10 @@ export function MobileNav() {
       </Dialog>
 
       <nav
-        className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card/95 backdrop-blur-md md:hidden safe-bottom"
+        className="mobile-floating-nav w-[calc(100%-2rem)] max-w-md border border-stone-200 dark:border-stone-800 bg-background/80 dark:bg-stone-900/80 backdrop-blur-lg rounded-full shadow-lg md:hidden py-1.5 px-2"
         aria-label="Mobile navigation"
       >
-        <div className="mx-auto flex max-w-lg items-stretch justify-around px-1 pt-1">
+        <div className="flex items-center justify-around gap-1">
           {primaryTabs.map(({ href, label, icon: Icon }) => {
             const active = isActive(pathname, href);
             return (
@@ -96,12 +96,14 @@ export function MobileNav() {
                 href={href}
                 onClick={() => setMoreOpen(false)}
                 className={cn(
-                  "flex min-h-14 min-w-[4.5rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1 text-[10px] font-medium transition",
-                  active ? "text-accent-foreground" : "text-muted"
+                  "flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-full transition-all duration-200 active:scale-95 flex-1",
+                  active
+                    ? "bg-stone-200/50 dark:bg-stone-800/60 text-primary"
+                    : "text-stone-400 dark:text-stone-500"
                 )}
               >
-                <Icon className={cn("h-5 w-5", active && "text-primary")} />
-                {label}
+                <Icon className="h-5 w-5" />
+                <span className="text-[10px] font-semibold">{label}</span>
               </Link>
             );
           })}
@@ -109,12 +111,14 @@ export function MobileNav() {
             type="button"
             onClick={() => setMoreOpen(!moreOpen)}
             className={cn(
-              "flex min-h-14 min-w-[4.5rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1 text-[10px] font-medium transition",
-              moreActive || moreOpen ? "text-accent-foreground" : "text-muted"
+              "flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-full transition-all duration-200 active:scale-95 flex-1",
+              moreActive || moreOpen
+                ? "bg-stone-200/50 dark:bg-stone-800/60 text-primary"
+                : "text-stone-400 dark:text-stone-500"
             )}
           >
-            <MoreHorizontal className={cn("h-5 w-5", (moreActive || moreOpen) && "text-primary")} />
-            More
+            <MoreHorizontal className="h-5 w-5" />
+            <span className="text-[10px] font-semibold">More</span>
           </button>
         </div>
       </nav>

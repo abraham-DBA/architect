@@ -10,8 +10,9 @@ export function Toaster() {
       closeButton
       toastOptions={{
         classNames: {
-          toast: "font-sans",
+          toast: "font-sans shadow-lg border border-border",
         },
+        duration: 3000,
       }}
     />
   );

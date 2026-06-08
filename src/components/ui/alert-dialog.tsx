@@ -1,24 +1,27 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
-import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-export function Dialog({
+export function AlertDialog({
   open,
   onClose,
   title,
   description,
-  children,
-  className,
+  cancelText = "Cancel",
+  actionText = "Continue",
+  onAction,
+  variant = "primary",
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   description?: string;
-  children: React.ReactNode;
-  className?: string;
+  cancelText?: string;
+  actionText?: string;
+  onAction: () => void;
+  variant?: "primary" | "destructive";
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -58,7 +61,7 @@ export function Dialog({
     document.addEventListener("keydown", handleKeyDown);
     document.body.style.overflow = "hidden";
 
-    // Focus the close button or first focusable element
+    // Focus the first button (usually Cancel)
     requestAnimationFrame(() => {
       const focusable = panelRef.current?.querySelectorAll<HTMLElement>(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
@@ -79,38 +82,50 @@ export function Dialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
         aria-hidden="true"
         onClick={onClose}
       />
       {/* Panel */}
       <div
         ref={panelRef}
-        role="dialog"
+        role="alertdialog"
         aria-modal="true"
-        aria-labelledby="dialog-title"
+        aria-labelledby="alert-dialog-title"
         tabIndex={-1}
         className={cn(
-          "relative z-10 max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl border border-border bg-card p-5 pb-8 shadow-[var(--shadow-lg)] sm:max-w-lg sm:rounded-2xl safe-bottom",
-          "animate-slide-up",
-          className
+          "relative z-10 max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-xl border border-border bg-card p-6 shadow-[var(--shadow-lg)]",
+          "animate-scale-in"
         )}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 id="dialog-title" className="text-lg font-semibold">
-              {title}
-            </h2>
-            {description && <p className="mt-1 text-sm text-muted">{description}</p>}
-          </div>
-          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
-            <X className="h-5 w-5" />
+        <div>
+          <h2 id="alert-dialog-title" className="text-lg font-semibold tracking-tight text-foreground">
+            {title}
+          </h2>
+          {description && (
+            <p className="mt-2 text-sm text-muted">
+              {description}
+            </p>
+          )}
+        </div>
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
+          <Button variant="secondary" onClick={onClose} className="w-full sm:w-auto">
+            {cancelText}
+          </Button>
+          <Button
+            variant={variant === "destructive" ? "danger" : "primary"}
+            onClick={() => {
+              onAction();
+              onClose();
+            }}
+            className="w-full sm:w-auto"
+          >
+            {actionText}
           </Button>
         </div>
-        <div className="mt-4">{children}</div>
       </div>
     </div>
   );

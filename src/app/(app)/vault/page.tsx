@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trophy } from "lucide-react";
+import { Trophy, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +14,9 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { OnboardingProgress } from "@/components/onboarding-progress";
+import { Dialog } from "@/components/ui/dialog";
+import { AlertDialog } from "@/components/ui/alert-dialog";
+import { SkeletonPage } from "@/components/ui/skeleton";
 import {
   ACCOMPLISHMENTS_REQUIRED,
   CATEGORY_LABELS,
@@ -29,6 +32,15 @@ type Accomplishment = {
   category: string;
 };
 
+const CATEGORY_COLORS: Record<string, string> = {
+  FINANCIAL: "border-l-emerald-500",
+  HEALTH: "border-l-rose-500",
+  FAMILY: "border-l-sky-500",
+  SKILLS: "border-l-amber-500",
+  TRAVEL: "border-l-violet-500",
+  SPIRITUAL: "border-l-indigo-500",
+};
+
 export default function VaultPage() {
   const router = useRouter();
   const [items, setItems] = useState<Accomplishment[]>([]);
@@ -36,6 +48,8 @@ export default function VaultPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [onboarding, setOnboarding] = useState<{
     steps: { id: string; label: string; complete: boolean; optional?: boolean }[];
   } | null>(null);
@@ -61,6 +75,7 @@ export default function VaultPage() {
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setSaving(true);
     const formEl = e.currentTarget;
     const form = new FormData(formEl);
     const res = await fetch("/api/accomplishments", {
@@ -76,23 +91,31 @@ export default function VaultPage() {
     if (!res.ok) {
       const data = await res.json();
       toast.error(data.error ?? "Failed to save accomplishment");
+      setSaving(false);
       return;
     }
     formEl.reset();
     toast.success("Accomplishment saved");
+    setSaving(false);
+    await load(page);
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    const res = await fetch(`/api/accomplishments/${deleteTarget}`, { method: "DELETE" });
+    if (!res.ok) {
+      toast.error("Failed to delete");
+      return;
+    }
+    setDeleteTarget(null);
+    toast.success("Accomplishment deleted");
     await load(page);
   }
 
   const needsMore = total < ACCOMPLISHMENTS_REQUIRED;
 
   if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="h-8 w-48 animate-pulse rounded-lg bg-stone-200" />
-        <div className="h-4 w-72 animate-pulse rounded bg-stone-100" />
-        <div className="h-40 animate-pulse rounded-xl bg-stone-100" />
-      </div>
-    );
+    return <SkeletonPage />;
   }
 
   return (
@@ -127,25 +150,26 @@ export default function VaultPage() {
         <form onSubmit={onSubmit} className="mt-4 grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2 sm:grid sm:grid-cols-2 sm:gap-4">
             <div>
-              <label className="mb-1.5 block text-sm font-medium">Title</label>
-              <Input name="title" maxLength={100} required placeholder="e.g. Finished my first 5K" />
+              <label htmlFor="vault-title" className="mb-1.5 block text-sm font-medium">Title</label>
+              <Input id="vault-title" name="title" maxLength={100} required placeholder="e.g. Finished my first 5K" />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium">Date achieved</label>
-              <Input name="dateAchieved" type="date" required />
+              <label htmlFor="vault-date" className="mb-1.5 block text-sm font-medium">Date achieved</label>
+              <Input id="vault-date" name="dateAchieved" type="date" required />
             </div>
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1.5 block text-sm font-medium">Category</label>
-            <Select name="category" required defaultValue="SKILLS">
+            <label htmlFor="vault-category" className="mb-1.5 block text-sm font-medium">Category</label>
+            <Select id="vault-category" name="category" required defaultValue="SKILLS">
               {LIFE_CATEGORIES.map((c) => (
                 <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
               ))}
             </Select>
           </div>
           <div className="sm:col-span-2">
-            <label className="mb-1.5 block text-sm font-medium">Description</label>
+            <label htmlFor="vault-desc" className="mb-1.5 block text-sm font-medium">Description</label>
             <Textarea
+              id="vault-desc"
               name="description"
               maxLength={2000}
               rows={4}
@@ -154,7 +178,9 @@ export default function VaultPage() {
             />
           </div>
           <div className="sm:col-span-2">
-            <Button type="submit" className="w-full sm:w-auto">Save accomplishment</Button>
+            <Button type="submit" loading={saving} className="w-full sm:w-auto">
+              {saving ? "Saving…" : "Save accomplishment"}
+            </Button>
           </div>
         </form>
       </Card>
@@ -169,8 +195,12 @@ export default function VaultPage() {
             description="Start with any win — big or small. You need 3 before moving to Brain Dump."
           />
         ) : (
-          items.map((item) => (
-            <Card key={item.id}>
+          items.map((item, index) => (
+            <Card
+              key={item.id}
+              className={`border-l-4 ${CATEGORY_COLORS[item.category] ?? "border-l-stone-300"} animate-fade-in-up`}
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <h3 className="font-semibold break-words">{item.title}</h3>
@@ -178,9 +208,18 @@ export default function VaultPage() {
                     {format(new Date(item.dateAchieved), "MMMM d, yyyy")}
                   </p>
                 </div>
-                <Badge>{CATEGORY_LABELS[item.category]}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge>{CATEGORY_LABELS[item.category]}</Badge>
+                  <button
+                    onClick={() => setDeleteTarget(item.id)}
+                    className="rounded-lg p-1.5 text-muted hover:text-danger hover:bg-danger-surface transition-colors"
+                    aria-label={`Delete ${item.title}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-              <p className="mt-3 text-sm text-foreground/80">{item.description}</p>
+              <p className="mt-3 text-sm text-foreground/80 leading-relaxed">{item.description}</p>
             </Card>
           ))
         )}
@@ -190,12 +229,27 @@ export default function VaultPage() {
             <Button variant="secondary" className="flex-1 sm:flex-none" disabled={page <= 1} onClick={() => load(page - 1)}>
               Previous
             </Button>
+            <span className="flex items-center justify-center flex-1 text-sm text-muted sm:flex-none sm:px-4">
+              Page {page} of {totalPages}
+            </span>
             <Button variant="secondary" className="flex-1 sm:flex-none" disabled={page >= totalPages} onClick={() => load(page + 1)}>
               Next
             </Button>
           </div>
         )}
       </section>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title="Delete accomplishment?"
+        description="This action cannot be undone."
+        cancelText="Cancel"
+        actionText="Delete"
+        onAction={handleDelete}
+        variant="destructive"
+      />
     </div>
   );
 }

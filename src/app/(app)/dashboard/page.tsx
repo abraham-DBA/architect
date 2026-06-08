@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getGoalSettingSessionState, getUserOnboardingState, getWeeklyReviewMeta } from "@/lib/user-state";
 import { getQuoteOfTheDay } from "@/lib/quotes";
-import { Target } from "lucide-react";
+import { Target, ArrowRight, Clock, AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -27,6 +27,24 @@ import {
   isOverdue,
 } from "@/lib/utils";
 import { format } from "date-fns";
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function getStatusBadgeVariant(status: string): "default" | "success" | "warning" {
+  switch (status) {
+    case "COMPLETED":
+      return "success";
+    case "NEEDS_REEVALUATION":
+      return "warning";
+    default:
+      return "default";
+  }
+}
 
 export default async function DashboardPage() {
   const user = await requireUser();
@@ -66,8 +84,10 @@ export default async function DashboardPage() {
     )
     .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
 
+  const displayName = user.name || "Architect";
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8">
       {reviewMeta.due && (
         <Alert variant="warning">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -91,10 +111,10 @@ export default async function DashboardPage() {
       )}
 
       <PageHeader
-        title="Dashboard"
+        title={`${getGreeting()}, ${displayName}`}
         description="Your daily command center for becoming and achieving."
         actions={
-          <div className="rounded-xl bg-accent-surface px-5 py-3 text-center">
+          <div className="rounded-xl bg-accent-surface px-5 py-3 text-center shadow-sm">
             <div className="text-2xl font-bold text-accent-foreground">{reviewMeta.streak}</div>
             <div className="text-xs font-medium uppercase tracking-wide text-muted">Week streak</div>
           </div>
@@ -123,7 +143,7 @@ export default async function DashboardPage() {
               }
             />
           </div>
-        ) : goals.map((goal) => {
+        ) : goals.map((goal, index) => {
           const doneSteps = goal.actionSteps.filter((s) => s.done).length;
           const totalSteps = goal.actionSteps.length;
           const completion = totalSteps === 0 ? 0 : totalSteps > 0 && doneSteps === totalSteps ? 100 : Math.round((doneSteps / totalSteps) * 100);
@@ -132,34 +152,43 @@ export default async function DashboardPage() {
           const savings = calculateSavingsProgress(saved, target);
 
           return (
-            <Card key={goal.id}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <Link href={`/goals/${goal.id}`} className="text-base font-semibold break-words hover:text-primary sm:text-lg">
-                    #{goal.rank} {goal.statement}
-                  </Link>
-                  <p className="mt-1 text-sm text-muted">
-                    {CATEGORY_LABELS[goal.category]} · {HORIZON_LABELS[goal.timeHorizon]}
-                  </p>
-                </div>
-                <Badge>{GOAL_STATUS_LABELS[goal.status]}</Badge>
-              </div>
-              <div className="mt-4">
-                <div className="mb-1 flex justify-between text-sm">
-                  <span>Action plan</span>
-                  <span>{totalSteps === 0 ? "Add steps" : `${completion}%`}</span>
-                </div>
-                <ProgressBar value={completion} />
-              </div>
-              {target > 0 && (
-                <div className="mt-4">
-                  <div className="mb-1 flex justify-between text-sm">
-                    <span>Savings</span>
-                    <span>{formatCurrency(saved)} / {formatCurrency(target)}</span>
+            <Card key={goal.id} interactive className="animate-fade-in-up" style={{ animationDelay: `${index * 75}ms` }}>
+              <Link href={`/goals/${goal.id}`} className="block">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-surface text-xs font-bold text-accent-foreground">
+                        {goal.rank}
+                      </span>
+                      <h3 className="text-base font-semibold break-words hover:text-primary transition-colors sm:text-lg">
+                        {goal.statement}
+                      </h3>
+                    </div>
+                    <p className="mt-1.5 text-sm text-muted">
+                      {CATEGORY_LABELS[goal.category]} · {HORIZON_LABELS[goal.timeHorizon]}
+                    </p>
                   </div>
-                  <ProgressBar value={savings.cappedPercentage} />
+                  <Badge variant={getStatusBadgeVariant(goal.status)}>
+                    {GOAL_STATUS_LABELS[goal.status]}
+                  </Badge>
                 </div>
-              )}
+                <div className="mt-4">
+                  <div className="mb-1.5 flex justify-between text-sm">
+                    <span className="text-muted">Action plan</span>
+                    <span className="font-medium">{totalSteps === 0 ? "Add steps" : `${completion}%`}</span>
+                  </div>
+                  <ProgressBar value={completion} />
+                </div>
+                {target > 0 && (
+                  <div className="mt-4">
+                    <div className="mb-1.5 flex justify-between text-sm">
+                      <span className="text-muted">Savings</span>
+                      <span className="font-medium">{formatCurrency(saved)} / {formatCurrency(target)}</span>
+                    </div>
+                    <ProgressBar value={savings.cappedPercentage} />
+                  </div>
+                )}
+              </Link>
             </Card>
           );
         })}
@@ -168,24 +197,31 @@ export default async function DashboardPage() {
       <Card>
         <h2 className="text-lg font-semibold">Today&apos;s action items</h2>
         {actionItems.length === 0 ? (
-          <p className="mt-3 text-sm text-stone-500">No actionable items due today. Stay disciplined.</p>
+          <p className="mt-3 text-sm text-muted">No actionable items due today. Stay disciplined.</p>
         ) : (
-          <ul className="mt-4 space-y-3">
+          <ul className="mt-4 space-y-2">
             {actionItems.map((item) => (
               <li
                 key={item.stepId}
-                className={`rounded-lg border px-4 py-3 ${item.overdue ? "border-red-300 bg-red-50" : "border-stone-200"}`}
+                className={`flex items-start gap-3 rounded-lg border px-4 py-3 transition-colors ${
+                  item.overdue
+                    ? "border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/30"
+                    : "border-border"
+                }`}
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium">{item.description}</p>
-                    <p className="text-sm text-stone-500">{item.goalStatement}</p>
-                  </div>
-                  <span className="text-sm text-stone-500">
-                    {format(new Date(item.deadline), "MMM d, yyyy")}
-                    {item.overdue ? " · Overdue" : ""}
-                  </span>
+                {item.overdue ? (
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-danger" />
+                ) : (
+                  <Clock className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium">{item.description}</p>
+                  <p className="text-sm text-muted">{item.goalStatement}</p>
                 </div>
+                <span className="shrink-0 text-sm text-muted">
+                  {format(new Date(item.deadline), "MMM d")}
+                  {item.overdue ? " · Overdue" : ""}
+                </span>
               </li>
             ))}
           </ul>

@@ -1,28 +1,45 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
+import { PWARegister } from "@/components/pwa-register";
 import "./globals.css";
 
-const geistSans = Geist({
+const inter = Inter({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
+const jetbrainsMono = JetBrains_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "The Architect",
+  title: {
+    default: "The Architect — Personal Goal Management",
+    template: "%s | The Architect",
+  },
   description:
-    "Personal goal management inspired by Jim Rohn — attract success by the person you become.",
+    "Personal goal management inspired by Jim Rohn — attract success by the person you become. Build belief, capture your vision, and grow through discipline.",
+  keywords: ["goal setting", "personal development", "Jim Rohn", "productivity", "goal tracking"],
+  applicationName: "The Architect",
+  appleWebApp: {
+    capable: true,
+    title: "Architect",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export const viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover" as const,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fafaf9" },
+    { media: "(prefers-color-scheme: dark)", color: "#0c0a09" },
+  ],
 };
 
 export default function RootLayout({
@@ -33,9 +50,12 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
     >
       <body className="min-h-dvh bg-background text-foreground">
+        <PWARegister />
         {children}
         <Toaster />
       </body>
