@@ -65,7 +65,7 @@ export default function HomePage() {
   return (
     <main className="min-h-dvh">
       {/* Header */}
-      <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 animate-fade-in">
+      <header className="safe-top mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 animate-fade-in">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Sparkles className="h-4 w-4" />

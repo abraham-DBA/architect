@@ -354,3 +354,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 input[type="date"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
 }
+
+/* Offset Sonner toast notifications on mobile to clear the status bar/notch */
+@media (max-width: 640px) {
+  [data-sonner-toaster] {
+    top: max(16px, env(safe-area-inset-top)) !important;
+  }
+}
