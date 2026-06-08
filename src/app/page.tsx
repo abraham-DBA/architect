@@ -67,8 +67,8 @@ export default function HomePage() {
       {/* Header */}
       <header className="safe-top mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 animate-fade-in">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Sparkles className="h-4 w-4" />
+          <div className="relative h-8 w-8 overflow-hidden rounded-lg border border-stone-200/50 dark:border-stone-800/80 shadow-sm bg-stone-900">
+            <img src="/logo.png" alt="The Architect Logo" className="h-full w-full object-cover" />
           </div>
           <p className="text-base font-bold tracking-tight">The Architect</p>
         </div>

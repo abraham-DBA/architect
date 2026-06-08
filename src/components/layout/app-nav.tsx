@@ -36,8 +36,8 @@ export function AppNav() {
     <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur-md safe-top">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:py-4">
         <Link href="/dashboard" className="min-w-0 shrink flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-            <Sparkles className="h-4 w-4" />
+          <div className="relative h-8 w-8 overflow-hidden rounded-lg border border-stone-200/50 dark:border-stone-800/80 shadow-sm bg-stone-900">
+            <img src="/logo.png" alt="The Architect Logo" className="h-full w-full object-cover" />
           </div>
           <div>
             <p className="truncate text-base font-bold tracking-tight text-foreground">The Architect</p>

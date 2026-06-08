@@ -17,8 +17,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="w-full max-w-md animate-fade-in-up">
           {/* Logo */}
           <div className="mb-8 flex justify-center mt-4 sm:mt-0">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg">
-              <Sparkles className="h-6 w-6" />
+            <div className="relative h-14 w-14 overflow-hidden rounded-2xl border border-stone-200/50 dark:border-stone-800/80 shadow-lg bg-stone-900">
+              <img src="/logo.png" alt="The Architect Logo" className="h-full w-full object-cover" />
             </div>
           </div>
           {children}
