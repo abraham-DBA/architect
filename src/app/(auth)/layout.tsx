@@ -4,7 +4,7 @@ import { ChevronLeft, Sparkles } from "lucide-react";
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col bg-background">
-      <header className="px-4 py-4 sm:px-6">
+      <header className="safe-top px-4 py-4 sm:px-6">
         <Link
           href="/"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-muted transition-colors hover:text-foreground"
@@ -13,10 +13,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           Back to home
         </Link>
       </header>
-      <div className="flex flex-1 items-center justify-center px-4 pb-12">
+      <div className="flex flex-1 items-start justify-center px-4 pt-4 pb-12 sm:items-center sm:pt-0">
         <div className="w-full max-w-md animate-fade-in-up">
           {/* Logo */}
-          <div className="mb-8 flex justify-center">
+          <div className="mb-8 flex justify-center mt-4 sm:mt-0">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg">
               <Sparkles className="h-6 w-6" />
             </div>

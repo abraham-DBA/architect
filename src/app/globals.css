@@ -126,7 +126,7 @@ body {
 
 /* Safe area support for notched devices */
 .safe-top {
-  padding-top: env(safe-area-inset-top);
+  padding-top: max(12px, env(safe-area-inset-top)) !important;
 }
 
 .safe-bottom {
