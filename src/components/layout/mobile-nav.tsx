@@ -17,8 +17,6 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Dialog } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 
 const primaryTabs = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
@@ -54,34 +52,74 @@ export function MobileNav() {
 
   return (
     <>
-      <Dialog open={moreOpen} onClose={() => setMoreOpen(false)} title="More" className="pb-24">
-        <div className="space-y-1">
-          {moreLinks.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
+      {/* iOS-style Action Sheet / Bottom Drawer */}
+      {moreOpen && (
+        <div className="fixed inset-0 z-[100] md:hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+            onClick={() => setMoreOpen(false)}
+          />
+          {/* Action Sheet Container */}
+          <div className="absolute inset-x-0 bottom-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex flex-col gap-2.5 max-w-md mx-auto animate-slide-up">
+            {/* Options Card */}
+            <div className="overflow-hidden rounded-2xl border border-stone-200 dark:border-stone-800 bg-card/95 dark:bg-stone-900/95 backdrop-blur-md shadow-xl">
+              {/* Drag Handle */}
+              <div className="py-2.5 flex justify-center">
+                <div className="w-9 h-1 rounded-full bg-stone-300 dark:bg-stone-700" />
+              </div>
+              
+              {/* Title Header */}
+              <div className="text-center text-[10px] font-bold tracking-wider text-muted uppercase pb-2.5 px-4 border-b border-stone-100 dark:border-stone-800/60">
+                More Actions
+              </div>
+
+              {/* Links List */}
+              <div className="flex flex-col">
+                {moreLinks.map(({ href, label, icon: Icon }) => {
+                  const active = isActive(pathname, href);
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      onClick={() => setMoreOpen(false)}
+                      className={cn(
+                        "flex min-h-12 items-center justify-between px-4 py-3 text-sm font-semibold transition-colors border-b border-stone-100 dark:border-stone-800/60 last:border-b-0",
+                        active
+                          ? "bg-primary/5 text-primary"
+                          : "text-foreground active:bg-stone-100 dark:active:bg-stone-800/50"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className={cn("h-5 w-5", active ? "text-primary" : "text-stone-400 dark:text-stone-500")} />
+                        <span>{label}</span>
+                      </div>
+                      {active && <div className="h-2 w-2 rounded-full bg-primary" />}
+                    </Link>
+                  );
+                })}
+                
+                {/* Sign Out Action */}
+                <button
+                  onClick={logout}
+                  className="flex min-h-12 w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-danger active:bg-danger-surface/40 transition-colors border-t border-stone-100 dark:border-stone-800/60"
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span>Sign out</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Cancel Card */}
+            <button
               onClick={() => setMoreOpen(false)}
-              className={cn(
-                "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                isActive(pathname, href)
-                  ? "bg-accent-surface text-accent-foreground"
-                  : "text-foreground hover:bg-stone-100 dark:hover:bg-stone-800"
-              )}
+              className="flex h-12 w-full items-center justify-center rounded-2xl border border-stone-200 dark:border-stone-800 bg-card/95 dark:bg-stone-900/95 backdrop-blur-md text-sm font-bold text-foreground active:bg-stone-100 dark:active:bg-stone-800/50 shadow-md transition-all active:scale-98"
             >
-              <Icon className="h-5 w-5" />
-              {label}
-            </Link>
-          ))}
-          <Button
-            variant="ghost"
-            className="mt-2 w-full justify-start gap-3 text-danger hover:bg-danger-surface hover:text-danger"
-            onClick={logout}
-          >
-            <LogOut className="h-5 w-5" />
-            Sign out
-          </Button>
+              Cancel
+            </button>
+          </div>
         </div>
-      </Dialog>
+      )}
 
       <nav
         className="mobile-floating-nav w-[calc(100%-2rem)] max-w-md border border-stone-200 dark:border-stone-800 bg-background/80 dark:bg-stone-900/80 backdrop-blur-lg rounded-full shadow-lg md:hidden py-1.5 px-2"
